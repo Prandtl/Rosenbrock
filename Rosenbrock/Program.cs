@@ -14,22 +14,22 @@ namespace Rosenbrock
         {
             var gd = new Nadam();
             gd.SetPosition(new List<double>() { 4, 8 });
-            var path = gd.Optimize(10000, 0.00001, 0.00001);
+            var path = gd.Optimize(10000, 0.00001, 0.35);
             Console.WriteLine($"path size: {path.Count}, " +
                 $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\momentum-path1.csv");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam-path1.csv");
 
             gd.SetPosition(new List<double>() { 0, 8 });
-            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            path = gd.Optimize(10000000, 0.00001, 0.35);
             Console.WriteLine($"path size: {path.Count}, " +
                 $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\momentum-path2.csv");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam-path2.csv");
 
             gd.SetPosition(new List<double>() { -4, -4 });
-            path = gd.Optimize(10000000, 0.0000001, 0.00000001);
+            path = gd.Optimize(10000000, 0.0000001, 0.35);
             Console.WriteLine($"path size: {path.Count}, " +
                 $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\momentum-path3.csv");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam-path3.csv");
         }
     }
 
@@ -118,6 +118,50 @@ namespace Rosenbrock
         }
     }
 
+    public class NAG
+    {
+        public List<double> CurrentPosition { get; private set; }
+
+        public void SetPosition(List<double> position)
+        {
+            CurrentPosition = position;
+        }
+
+        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
+        {
+            var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var prediction = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var learningRate = stepSize;
+            var momentumRemembrance = 0.9;
+
+            var steps = new List<double[]>() { CurrentPosition.ToArray() };
+
+            for (int step = 0; step < maxSteps; step++) {
+                for (int i = 0; i < CurrentPosition.Count; i++) {
+                    prediction[i] = CurrentPosition[i] - momentum[i] * momentumRemembrance;
+                }
+
+                var grad = Rosenbrock.AntiGradientIn(prediction);
+
+                for (int i = 0; i < CurrentPosition.Count; i++) {
+                    momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
+                    CurrentPosition[i] = CurrentPosition[i] + momentum[i];
+                }
+
+                steps.Add(CurrentPosition.ToArray());
+                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
+                    break;
+                }
+            }
+            return steps;
+        }
+
+        public NAG()
+        {
+            CurrentPosition = new List<double>();
+        }
+    }
+
     public class Nadam
     {
         public List<double> CurrentPosition { get; private set; }
@@ -130,8 +174,15 @@ namespace Rosenbrock
         public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
         {
             var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var firstOrderMomentumEstimate = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var firstOrderMomentumEstimateCorrected = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var secondOrderMomentumEstimate = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var secondOrderMomentumEstimateCorrected = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
             var learningRate = stepSize;
             var momentumRemembrance = 0.9;
+            var beta1 = 0.9;
+            var beta2 = 0.9999;
+            var e = 1e-10;
 
             var steps = new List<double[]>() { CurrentPosition.ToArray() };
 
@@ -140,7 +191,15 @@ namespace Rosenbrock
 
                 for (int i = 0; i < CurrentPosition.Count; i++) {
                     momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
-                    CurrentPosition[i] = CurrentPosition[i] + momentum[i];
+                    firstOrderMomentumEstimate[i] = beta1 * firstOrderMomentumEstimate[i] + (1 - beta1) * grad[i];
+                    secondOrderMomentumEstimate[i] = beta2 * secondOrderMomentumEstimate[i] + (1 - beta2) * grad[i] * grad[i];
+                    firstOrderMomentumEstimateCorrected[i] = firstOrderMomentumEstimate[i] / (1 - Math.Pow(beta1, step + 1));
+                    secondOrderMomentumEstimateCorrected[i] = secondOrderMomentumEstimate[i] / (1 - Math.Pow(beta2, step + 1));
+
+                    CurrentPosition[i] = CurrentPosition[i] +
+                        learningRate / (Math.Sqrt(secondOrderMomentumEstimateCorrected[i]) + e) *
+                        (beta1 * firstOrderMomentumEstimateCorrected[i] +
+                            (1 - beta1) * grad[i] / (1 - Math.Pow(beta1, step + 1)));
                 }
 
                 steps.Add(CurrentPosition.ToArray());
