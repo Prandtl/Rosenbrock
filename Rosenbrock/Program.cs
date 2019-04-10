@@ -12,12 +12,24 @@ namespace Rosenbrock
     {
         static void Main(string[] args)
         {
-            var gd = new GradientDescent();
+            var gd = new Nadam();
             gd.SetPosition(new List<double>() { 4, 8 });
-            var path = gd.Optimize(10000000, 0.00001, 0.00001);
+            var path = gd.Optimize(10000, 0.00001, 0.00001);
             Console.WriteLine($"path size: {path.Count}, " +
                 $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\path.csv");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\momentum-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 8 });
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\momentum-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4 });
+            path = gd.Optimize(10000000, 0.0000001, 0.00000001);
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\momentum-path3.csv");
         }
     }
 
@@ -65,6 +77,87 @@ namespace Rosenbrock
             CurrentPosition = new List<double>();
         }
     }
+
+
+    public class Momentum
+    {
+        public List<double> CurrentPosition { get; private set; }
+
+        public void SetPosition(List<double> position)
+        {
+            CurrentPosition = position;
+        }
+
+        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
+        {
+            var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var learningRate = stepSize;
+            var momentumRemembrance = 0.9;
+
+            var steps = new List<double[]>() { CurrentPosition.ToArray() };
+
+            for (int step = 0; step < maxSteps; step++) {
+                var grad = Rosenbrock.AntiGradientIn(CurrentPosition);
+
+                for (int i = 0; i < CurrentPosition.Count; i++) {
+                    momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
+                    CurrentPosition[i] = CurrentPosition[i] + momentum[i];
+                }
+
+                steps.Add(CurrentPosition.ToArray());
+                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
+                    break;
+                }
+            }
+            return steps;
+        }
+
+        public Momentum()
+        {
+            CurrentPosition = new List<double>();
+        }
+    }
+
+    public class Nadam
+    {
+        public List<double> CurrentPosition { get; private set; }
+
+        public void SetPosition(List<double> position)
+        {
+            CurrentPosition = position;
+        }
+
+        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
+        {
+            var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var learningRate = stepSize;
+            var momentumRemembrance = 0.9;
+
+            var steps = new List<double[]>() { CurrentPosition.ToArray() };
+
+            for (int step = 0; step < maxSteps; step++) {
+                var grad = Rosenbrock.AntiGradientIn(CurrentPosition);
+
+                for (int i = 0; i < CurrentPosition.Count; i++) {
+                    momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
+                    CurrentPosition[i] = CurrentPosition[i] + momentum[i];
+                }
+
+                steps.Add(CurrentPosition.ToArray());
+                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
+                    break;
+                }
+            }
+            return steps;
+        }
+
+        public Nadam()
+        {
+            CurrentPosition = new List<double>();
+        }
+    }
+
+
 
     public static class Helpers
     {
