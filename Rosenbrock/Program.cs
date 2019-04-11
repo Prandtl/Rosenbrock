@@ -1,9 +1,10 @@
 ﻿using CsvHelper;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rosenbrock
@@ -12,258 +13,456 @@ namespace Rosenbrock
     {
         static void Main(string[] args)
         {
-            var gd = new Nadam();
-            gd.SetPosition(new List<double>() { 4, 8 });
-            var path = gd.Optimize(10000, 0.00001, 0.35);
-            Console.WriteLine($"path size: {path.Count}, " +
-                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam-path1.csv");
+            TestGradient();
+            Console.WriteLine("===================================================");
+            //TestHogwild();
+            //Console.WriteLine("===================================================");
+            //TestNadam();
+            //Console.WriteLine("===================================================");
+            //TestParallelNadam();
+            //Console.WriteLine("===================================================");
+            TestNadams();
+            Console.WriteLine("===================================================");
 
-            gd.SetPosition(new List<double>() { 0, 8 });
-            path = gd.Optimize(10000000, 0.00001, 0.35);
+            while (true ) { }
+        }
+
+        async static void TestNadams()
+        {
+            var sw = new Stopwatch();
+
+            var solver = new ParallelNadams();
+            var mins = new List<double>() { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10 };
+            var maxs = new List<double>() { -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10, -10 };
+            sw.Reset();
+            sw.Start();
+            var result = await solver.Optimize(10000, 0.00001, 10, mins, maxs, 2);
+            sw.Stop();
+
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+
+
+            sw.Reset();
+            sw.Start();
+            result = await solver.Optimize(10000, 0.00001, 10, mins, maxs, 4);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+
+            sw.Reset();
+            sw.Start();
+            result = await solver.Optimize(10000, 0.00001, 10, mins, maxs, 6);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+
+            sw.Reset();
+            sw.Start();
+            result = await solver.Optimize(10000, 0.00001, 10, mins, maxs, 8);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+
+            sw.Reset();
+            sw.Start();
+            result = await solver.Optimize(10000, 0.00001, 10, mins, maxs, 16);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+        }
+
+        static void TestHogwild()
+        {
+            var sw = new Stopwatch();
+
+            var gd = new Hogwild();
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            var result = gd.Optimize(10000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            result = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5, -7, 9, 20, 16, 2, -2, 0, 10 });
+            sw.Reset();
+            sw.Start();
+            result = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {result.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+        }
+
+        static void TestGradient()
+        {
+
+            var sw = new Stopwatch();
+
+            var gd = new GradientDescent();
+
+            gd.SetPosition(new List<double>() { 8, 4 });
+            sw.Reset();
+            sw.Start();
+            var path = gd.Optimize(10000, 0.00001, 0.00001);
+            sw.Stop();
             Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
                 $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam-path2.csv");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient2-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient2-path2.csv");
 
             gd.SetPosition(new List<double>() { -4, -4 });
-            path = gd.Optimize(10000000, 0.0000001, 0.35);
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
             Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
                 $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
-            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam-path3.csv");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient2-path3.csv");
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient8-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient8-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient8-path3.csv");
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient16-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient16-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5, -7, 9, 20, 16, 2, -2, 0, 10 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.00001);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\gradient16-path3.csv");
+        }
+
+        static void TestNadam()
+        {
+            var sw = new Stopwatch();
+
+            var gd = new Nadam();
+
+            gd.SetPosition(new List<double>() { 8, 4 });
+            sw.Reset();
+            sw.Start();
+            var path = gd.Optimize(10000, 0.00001, 0.35);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam2-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.35);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam2-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.35);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam2-path3.csv");
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam8-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam8-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam8-path3.csv");
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam16-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam16-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5, -7, 9, 20, 16, 2, -2, 0, 10 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadam16-path3.csv");
+        }
+
+
+        static void TestParallelNadam()
+        {
+            var sw = new Stopwatch();
+
+            var gd = new ParallelForNadam();
+
+            gd.SetPosition(new List<double>() { 8, 4 });
+            sw.Reset();
+            sw.Start();
+            var path = gd.Optimize(10000, 0.00001, 0.35);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp2-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.35);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp2-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 0.35);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp2-path3.csv");
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp8-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp8-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp8-path3.csv");
+
+            gd.SetPosition(new List<double>() { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp16-path1.csv");
+
+            gd.SetPosition(new List<double>() { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp16-path2.csv");
+
+            gd.SetPosition(new List<double>() { -4, -4, 0, 8, 0, 1, 10, 5, -7, 9, 20, 16, 2, -2, 0, 10 });
+            sw.Reset();
+            sw.Start();
+            path = gd.Optimize(10000000, 0.00001, 10);
+            sw.Stop();
+            Console.WriteLine($"path size: {path.Count}, " +
+                $"elapsed time: {sw.ElapsedTicks}, " +
+                $"result: {gd.CurrentPosition.Select(i => i.ToString()).Aggregate((x, i) => x + " " + i)}");
+            PathWriter.WritePath(path, @"C:\Workspace\Rosenbrock\notebook\nadamp16-path3.csv");
         }
     }
 
-    public static class PathWriter
+
+    public class ParallelNadams
     {
-        public static void WritePath(List<double[]> path, string file)
+        private readonly Random random = new Random();
+
+        private List<double> GeneratePoint(List<double> mins, List<double> maxs)
         {
-            using (var writer = new StreamWriter(file)) {
-                var items = path.Select(step =>
-                        string.Join("|", step.Select(i => i.ToString())));
-                foreach (var item in items) {
-                    writer.WriteLine(item);
-                }
+            var len = mins.Count;
+            return Enumerable.Range(0, len).Select(i => random.NextDouble() * (maxs[i] - mins[i]) + mins[i]).ToList();
+        }
+
+        public async Task<double[]> Optimize(int maxSteps, double eps, double stepSize, List<double> mins, List<double> maxs, int n)
+        {
+            var points = Enumerable.Range(0, n).Select(i => GeneratePoint(mins, maxs)).ToArray();
+            var ts = new CancellationTokenSource();
+            var tasks = points.Select(p => new Task<double[]>(() => OptimizationWork(p, maxSteps, eps, stepSize, ts.Token))).ToArray();
+            foreach (var t in tasks) {
+                t.Start();
             }
-        }
-    }
-
-    public class GradientDescent
-    {
-        public List<double> CurrentPosition { get; private set; }
-
-        public void SetPosition(List<double> position)
-        {
-            CurrentPosition = position;
+            var firstToFinish = await Task.WhenAny(tasks);
+            ts.Cancel();
+            return firstToFinish.Result;
         }
 
-        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
+        public double[] OptimizationWork(List<double> startPosition, int maxSteps, double eps, double stepSize, CancellationToken ct)
         {
-            var steps = new List<double[]>() { CurrentPosition.ToArray() };
-            for (int step = 0; step < maxSteps; step++) {
-                var grad = Rosenbrock.AntiGradientIn(CurrentPosition);
-                for (int i = 0; i < CurrentPosition.Count; i++) {
-                    CurrentPosition[i] += grad[i] * stepSize;
-                }
-                steps.Add(CurrentPosition.ToArray());
-                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
-                    break;
-                }
-            }
-            return steps;
-        }
-
-        public GradientDescent()
-        {
-            CurrentPosition = new List<double>();
-        }
-    }
-
-
-    public class Momentum
-    {
-        public List<double> CurrentPosition { get; private set; }
-
-        public void SetPosition(List<double> position)
-        {
-            CurrentPosition = position;
-        }
-
-        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
-        {
-            var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var learningRate = stepSize;
-            var momentumRemembrance = 0.9;
-
-            var steps = new List<double[]>() { CurrentPosition.ToArray() };
-
-            for (int step = 0; step < maxSteps; step++) {
-                var grad = Rosenbrock.AntiGradientIn(CurrentPosition);
-
-                for (int i = 0; i < CurrentPosition.Count; i++) {
-                    momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
-                    CurrentPosition[i] = CurrentPosition[i] + momentum[i];
-                }
-
-                steps.Add(CurrentPosition.ToArray());
-                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
-                    break;
-                }
-            }
-            return steps;
-        }
-
-        public Momentum()
-        {
-            CurrentPosition = new List<double>();
-        }
-    }
-
-    public class NAG
-    {
-        public List<double> CurrentPosition { get; private set; }
-
-        public void SetPosition(List<double> position)
-        {
-            CurrentPosition = position;
-        }
-
-        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
-        {
-            var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var prediction = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var learningRate = stepSize;
-            var momentumRemembrance = 0.9;
-
-            var steps = new List<double[]>() { CurrentPosition.ToArray() };
-
-            for (int step = 0; step < maxSteps; step++) {
-                for (int i = 0; i < CurrentPosition.Count; i++) {
-                    prediction[i] = CurrentPosition[i] - momentum[i] * momentumRemembrance;
-                }
-
-                var grad = Rosenbrock.AntiGradientIn(prediction);
-
-                for (int i = 0; i < CurrentPosition.Count; i++) {
-                    momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
-                    CurrentPosition[i] = CurrentPosition[i] + momentum[i];
-                }
-
-                steps.Add(CurrentPosition.ToArray());
-                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
-                    break;
-                }
-            }
-            return steps;
-        }
-
-        public NAG()
-        {
-            CurrentPosition = new List<double>();
-        }
-    }
-
-    public class Nadam
-    {
-        public List<double> CurrentPosition { get; private set; }
-
-        public void SetPosition(List<double> position)
-        {
-            CurrentPosition = position;
-        }
-
-        public List<double[]> Optimize(int maxSteps, double eps, double stepSize)
-        {
-            var momentum = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var firstOrderMomentumEstimate = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var firstOrderMomentumEstimateCorrected = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var secondOrderMomentumEstimate = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
-            var secondOrderMomentumEstimateCorrected = Enumerable.Range(0, CurrentPosition.Count).Select(x => 0d).ToList();
+            var currentPosition = startPosition;
+            var momentum = Enumerable.Range(0, currentPosition.Count).Select(x => 0d).ToList();
+            var firstOrderMomentumEstimate = Enumerable.Range(0, currentPosition.Count).Select(x => 0d).ToList();
+            var firstOrderMomentumEstimateCorrected = Enumerable.Range(0, currentPosition.Count).Select(x => 0d).ToList();
+            var secondOrderMomentumEstimate = Enumerable.Range(0, currentPosition.Count).Select(x => 0d).ToList();
+            var secondOrderMomentumEstimateCorrected = Enumerable.Range(0, currentPosition.Count).Select(x => 0d).ToList();
             var learningRate = stepSize;
             var momentumRemembrance = 0.9;
             var beta1 = 0.9;
             var beta2 = 0.9999;
             var e = 1e-10;
 
-            var steps = new List<double[]>() { CurrentPosition.ToArray() };
+            var steps = new List<double[]>() { currentPosition.ToArray() };
 
             for (int step = 0; step < maxSteps; step++) {
-                var grad = Rosenbrock.AntiGradientIn(CurrentPosition);
+                var grad = Rosenbrock.AntiGradientIn(currentPosition);
 
-                for (int i = 0; i < CurrentPosition.Count; i++) {
+                for (int i = 0; i < currentPosition.Count; i++) {
                     momentum[i] = momentum[i] * momentumRemembrance + grad[i] * learningRate;
                     firstOrderMomentumEstimate[i] = beta1 * firstOrderMomentumEstimate[i] + (1 - beta1) * grad[i];
                     secondOrderMomentumEstimate[i] = beta2 * secondOrderMomentumEstimate[i] + (1 - beta2) * grad[i] * grad[i];
                     firstOrderMomentumEstimateCorrected[i] = firstOrderMomentumEstimate[i] / (1 - Math.Pow(beta1, step + 1));
                     secondOrderMomentumEstimateCorrected[i] = secondOrderMomentumEstimate[i] / (1 - Math.Pow(beta2, step + 1));
 
-                    CurrentPosition[i] = CurrentPosition[i] +
+                    currentPosition[i] = currentPosition[i] +
                         learningRate / (Math.Sqrt(secondOrderMomentumEstimateCorrected[i]) + e) *
                         (beta1 * firstOrderMomentumEstimateCorrected[i] +
                             (1 - beta1) * grad[i] / (1 - Math.Pow(beta1, step + 1)));
                 }
 
-                steps.Add(CurrentPosition.ToArray());
-                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps) {
+                steps.Add(currentPosition.ToArray());
+                if (steps[steps.Count - 1].EuclideanDistance(steps[steps.Count - 2]) < eps || ct.IsCancellationRequested) {
                     break;
                 }
             }
-            return steps;
+            return steps.Last();
         }
 
-        public Nadam()
+        public ParallelNadams()
         {
-            CurrentPosition = new List<double>();
-        }
-    }
-
-
-
-    public static class Helpers
-    {
-        public static double EuclideanDistance(this double[] from, double[] to)
-        {
-            if (from.Length != to.Length) {
-                throw new ArgumentException("Can't calculate distance for vectors with different size.");
-            }
-
-            var distanceSquared = 0d;
-            for (int i = 0; i < from.Length; i++) {
-                distanceSquared += Math.Pow(from[i] - to[i], 2);
-            }
-
-            var result = Math.Sqrt(distanceSquared);
-            return result;
-        }
-    }
-
-    public static class Rosenbrock
-    {
-        public static double ValueIn(List<double> vec)
-        {
-            var dim = vec.Count;
-            var value = 0d;
-            for (int i = 0; i < dim - 1; i++) {
-                var component = Math.Pow(1 - vec[i], 2) + 100 * Math.Pow(vec[i + 1] - vec[i] * vec[i], 2);
-                value += component;
-            }
-            return value;
-        }
-
-        public static List<double> GradientIn(List<double> vec)
-        {
-            var dim = vec.Count;
-            var gradient = new List<double>(new double[dim]);
-            gradient[0] = 400 * Math.Pow(vec[0], 3) - 400 * vec[1] + 2 * vec[0] - 2;
-            for (int i = 1; i < dim - 1; i++) {
-                gradient[i] = 400 * Math.Pow(vec[i], 3) - 200 * Math.Pow(vec[i - 1], 2) - 400 * vec[i + 1] + 202 * vec[i] - 2;
-            }
-            gradient[dim - 1] = 200 * vec[dim - 1] - 200 * vec[dim - 2];
-            return gradient;
-        }
-
-        public static List<double> AntiGradientIn(List<double> vec)
-        {
-            return GradientIn(vec).Select(x => -x).ToList();
         }
     }
 }
